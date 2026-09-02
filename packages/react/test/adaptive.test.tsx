@@ -103,3 +103,58 @@ describe("useAdaptive", () => {
     expect(btn.textContent).toBe("Export");
   });
 });
+
+describe("AdaptiveProvider lifecycle", () => {
+  beforeEach(() => { localStorage.clear(); document.body.innerHTML = ""; });
+
+  // Regression: the provider used to build its runtime during render and
+  // destroy it in cleanup. StrictMode's mount/unmount/mount cycle then left it
+  // permanently torn down, silently disabling tracking in every dev build.
+  it("keeps tracking under StrictMode", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    await act(async () => {
+      createRoot(container).render(
+        <React.StrictMode>
+          <AdaptiveProvider appId="strict">
+            <Adaptive id="export" novice="Export this project as a PDF" expert="Export">
+              <button>Export</button>
+            </Adaptive>
+          </AdaptiveProvider>
+        </React.StrictMode>
+      );
+    });
+
+    const btn = container.querySelector("button")!;
+    await act(async () => {
+      for (let i = 0; i < 30; i++) {
+        btn.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+        btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        btn.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+      }
+    });
+
+    expect(btn.getAttribute("data-adaptive-tier")).toBe("expert");
+    expect(btn.textContent).toBe("Export");
+  });
+
+  it("releases listeners when unmounted", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <AdaptiveProvider appId="unmount">
+          <Adaptive id="x"><button>x</button></Adaptive>
+        </AdaptiveProvider>
+      );
+    });
+    await act(async () => root.unmount());
+
+    const before = localStorage.getItem("mindra_stats_unmount");
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(localStorage.getItem("mindra_stats_unmount")).toBe(before);
+  });
+});

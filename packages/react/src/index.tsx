@@ -10,23 +10,27 @@ interface AdaptiveProviderProps extends MindraConfig {
 }
 
 export function AdaptiveProvider({ children, ...config }: AdaptiveProviderProps) {
-  const runtimeRef = useRef<MindraRuntime | null>(null);
+  const [runtime, setRuntime] = useState<MindraRuntime | null>(null);
 
-  if (!runtimeRef.current) {
-    runtimeRef.current = new MindraRuntime(config);
-  }
+  // Held in a ref so that changing an inline `ai` object or `onSync` closure on
+  // every render does not tear the runtime down and rebuild it.
+  const configRef = useRef(config);
+  configRef.current = config;
 
+  const { appId, lambda, storageKey, syncInterval } = config;
+
+  // The runtime is created in an effect rather than during render. Creating it
+  // during render leaves it destroyed under React StrictMode, whose
+  // mount/unmount/mount cycle runs the cleanup once with nothing to rebuild it
+  // — which silently stops all tracking in every development build.
   useEffect(() => {
-    return () => {
-      if (runtimeRef.current) {
-        runtimeRef.current.destroy();
-        runtimeRef.current = null;
-      }
-    };
-  }, []);
+    const instance = new MindraRuntime({ ...configRef.current });
+    setRuntime(instance);
+    return () => instance.destroy();
+  }, [appId, lambda, storageKey, syncInterval]);
 
   return (
-    <AdaptiveContext.Provider value={runtimeRef.current}>
+    <AdaptiveContext.Provider value={runtime}>
       {children}
     </AdaptiveContext.Provider>
   );
