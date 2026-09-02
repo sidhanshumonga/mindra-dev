@@ -1,4 +1,4 @@
-import { MindraConfig, AdaptiveState, InteractionEvent, ExpertiseTier } from "./types";
+import { MindraConfig, AdaptiveState, InteractionEvent, ExpertiseTier, ElementStats } from "./types";
 import { MindraStorage } from "./storage";
 import { MindraTelemetry } from "./telemetry";
 import { evaluateElementState } from "./scoring";
@@ -29,7 +29,7 @@ export class MindraRuntime {
     // Local-first by default. With no `onSync` handler nothing ever leaves
     // the browser; with no `ai` config the runtime is fully deterministic and
     // needs no model, no API key and no network. Both are strictly opt-in.
-    this.storage = new MindraStorage(config.appId, config.storageKey);
+    this.storage = new MindraStorage(config.appId, config.storageKey, config.userId);
     this.telemetry = new MindraTelemetry(config.appId, (event) => this.handleEvent(event));
 
     if (this.config.ai) {
@@ -237,6 +237,27 @@ Do not include markdown tags, quotes, backticks, or any conversational greetings
     } catch (e) {
       console.warn("Mindra AI: failed to batch generate adaptation copy", e);
     }
+  }
+
+  /**
+   * The full experience state, ready to persist wherever you keep user data.
+   * Pair with `hydrate` to carry familiarity across devices; the library itself
+   * stores nothing beyond this browser.
+   */
+  public exportStats(): Record<string, ElementStats> {
+    return this.storage.getAll();
+  }
+
+  /** Seeds state persisted elsewhere. See MindraStorage.hydrate for merge semantics. */
+  public hydrate(
+    stats: Record<string, ElementStats>,
+    options: { merge?: boolean } = {}
+  ): void {
+    this.storage.hydrate(stats, options);
+    this.activeElements.forEach((elementId) => {
+      const state = this.getState(elementId);
+      this.subscribers.forEach((cb) => cb(elementId, state));
+    });
   }
 
   public trackError(elementId: string): void {

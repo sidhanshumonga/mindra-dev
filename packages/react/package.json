@@ -1,6 +1,6 @@
 {
   "name": "@mindra.dev/react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React bindings for Mindra. Adapt copy, tooltips and confirmation flows to how familiar each user is with each element.",
   "keywords": [
     "react",
@@ -53,7 +53,7 @@
     "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@mindra.dev/core": "^0.1.0"
+    "@mindra.dev/core": "^0.2.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

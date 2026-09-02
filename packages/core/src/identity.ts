@@ -53,3 +53,19 @@ export function createEventId(): string {
 
   return Math.random().toString(36).substring(2, 11);
 }
+
+/**
+ * Derives a short, stable, non-reversible key fragment from a user identifier.
+ *
+ * FNV-1a: not a security primitive, and not used as one. Its job is to keep a
+ * raw email or account id out of localStorage while still giving each user a
+ * distinct namespace on a shared device.
+ */
+export function hashIdentifier(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}

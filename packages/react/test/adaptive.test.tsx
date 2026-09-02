@@ -158,3 +158,62 @@ describe("AdaptiveProvider lifecycle", () => {
     expect(localStorage.getItem("mindra_stats_unmount")).toBe(before);
   });
 });
+
+describe("cross-device seam", () => {
+  beforeEach(() => { localStorage.clear(); document.body.innerHTML = ""; });
+
+  it("applies state persisted elsewhere on mount", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    await act(async () => {
+      createRoot(container).render(
+        <AdaptiveProvider
+          appId="app"
+          userId="alice"
+          initialStats={{
+            export: { clicks: 40, hovers: 40, abandonments: 0, errors: 0, totalHesitation: 400 },
+          }}
+        >
+          <Adaptive id="export" novice="Export this project as a PDF" expert="Export">
+            <button>Export</button>
+          </Adaptive>
+        </AdaptiveProvider>
+      );
+    });
+
+    const btn = container.querySelector("button")!;
+    expect(btn.getAttribute("data-adaptive-tier")).toBe("expert");
+    expect(btn.textContent).toBe("Export");
+  });
+
+  it("keeps two users on the same browser apart", async () => {
+    const render = async (userId: string) => {
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      await act(async () => {
+        createRoot(container).render(
+          <AdaptiveProvider appId="app" userId={userId}>
+            <Adaptive id="export" novice="Export this project as a PDF" expert="Export">
+              <button>Export</button>
+            </Adaptive>
+          </AdaptiveProvider>
+        );
+      });
+      return container.querySelector("button")!;
+    };
+
+    const alice = await render("alice");
+    await act(async () => {
+      for (let i = 0; i < 30; i++) {
+        alice.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+        alice.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }
+    });
+    expect(alice.getAttribute("data-adaptive-tier")).toBe("expert");
+
+    // bob shares the browser but not the profile
+    const bob = await render("bob");
+    expect(bob.getAttribute("data-adaptive-tier")).toBe("novice");
+  });
+});

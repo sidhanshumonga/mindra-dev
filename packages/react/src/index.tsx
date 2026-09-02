@@ -1,15 +1,28 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState, cloneElement, isValidElement } from "react";
-import { MindraRuntime, MindraConfig, AdaptiveState, ExpertiseTier } from "@mindra.dev/core";
+import { MindraRuntime, MindraConfig, AdaptiveState, ExpertiseTier, ElementStats } from "@mindra.dev/core";
 
 const AdaptiveContext = createContext<MindraRuntime | null>(null);
 
 interface AdaptiveProviderProps extends MindraConfig {
   children: React.ReactNode;
+  /**
+   * Experience state you persisted elsewhere, applied once the runtime starts.
+   * This is the seam for carrying familiarity across devices: the library keeps
+   * nothing beyond this browser, so what you store and how is yours.
+   */
+  initialStats?: Record<string, ElementStats>;
+  /** Combine with any state already on this device rather than replacing it. */
+  mergeInitialStats?: boolean;
 }
 
-export function AdaptiveProvider({ children, ...config }: AdaptiveProviderProps) {
+export function AdaptiveProvider({
+  children,
+  initialStats,
+  mergeInitialStats,
+  ...config
+}: AdaptiveProviderProps) {
   const [runtime, setRuntime] = useState<MindraRuntime | null>(null);
 
   // Held in a ref so that changing an inline `ai` object or `onSync` closure on
@@ -17,7 +30,12 @@ export function AdaptiveProvider({ children, ...config }: AdaptiveProviderProps)
   const configRef = useRef(config);
   configRef.current = config;
 
-  const { appId, lambda, storageKey, syncInterval } = config;
+  const { appId, userId, lambda, storageKey, syncInterval } = config;
+
+  // Held in a ref so a freshly-built object on each render does not restart the
+  // runtime; hydration is keyed to the identity below, not to object identity.
+  const initialStatsRef = useRef(initialStats);
+  initialStatsRef.current = initialStats;
 
   // The runtime is created in an effect rather than during render. Creating it
   // during render leaves it destroyed under React StrictMode, whose
@@ -25,9 +43,12 @@ export function AdaptiveProvider({ children, ...config }: AdaptiveProviderProps)
   // — which silently stops all tracking in every development build.
   useEffect(() => {
     const instance = new MindraRuntime({ ...configRef.current });
+    if (initialStatsRef.current) {
+      instance.hydrate(initialStatsRef.current, { merge: mergeInitialStats });
+    }
     setRuntime(instance);
     return () => instance.destroy();
-  }, [appId, lambda, storageKey, syncInterval]);
+  }, [appId, userId, lambda, storageKey, syncInterval, mergeInitialStats]);
 
   return (
     <AdaptiveContext.Provider value={runtime}>

@@ -1,5 +1,5 @@
 import { ElementStats } from "./types";
-import { sanitizeElementId } from "./identity";
+import { sanitizeElementId, hashIdentifier } from "./identity";
 
 const DEFAULT_STATS: ElementStats = {
   clicks: 0,
@@ -26,8 +26,9 @@ export class MindraStorage {
   private dirty = false;
   private onPageHide?: () => void;
 
-  constructor(appId: string, customKeyPrefix?: string) {
-    this.storageKey = `${customKeyPrefix || "mindra"}_stats_${appId}`;
+  constructor(appId: string, customKeyPrefix?: string, userId?: string) {
+    const scope = userId ? `_u${hashIdentifier(userId)}` : "";
+    this.storageKey = `${customKeyPrefix || "mindra"}_stats_${appId}${scope}`;
     this.load();
     this.bindLifecycle();
   }
@@ -148,6 +149,41 @@ export class MindraStorage {
 
   public getAll(): Record<string, ElementStats> {
     return { ...this.cache };
+  }
+
+  /**
+   * Seeds the cache from state persisted elsewhere — a backend, another device.
+   *
+   * With `merge`, counters are combined by taking the larger of the two rather
+   * than summing. Summing would inflate the score every time the same history
+   * was hydrated twice; taking the maximum is idempotent, so re-hydrating is
+   * always safe, and familiarity never moves backwards.
+   */
+  public hydrate(
+    stats: Record<string, ElementStats>,
+    options: { merge?: boolean } = {}
+  ): void {
+    for (const [rawId, incoming] of Object.entries(stats || {})) {
+      if (!incoming || typeof incoming !== "object") continue;
+      const key = sanitizeElementId(rawId);
+
+      if (!options.merge || !this.cache[key]) {
+        this.cache[key] = { ...DEFAULT_STATS, ...incoming };
+        continue;
+      }
+
+      const current = this.cache[key];
+      this.cache[key] = {
+        clicks: Math.max(current.clicks || 0, incoming.clicks || 0),
+        hovers: Math.max(current.hovers || 0, incoming.hovers || 0),
+        abandonments: Math.max(current.abandonments || 0, incoming.abandonments || 0),
+        errors: Math.max(current.errors || 0, incoming.errors || 0),
+        totalHesitation: Math.max(current.totalHesitation || 0, incoming.totalHesitation || 0),
+        lastSeen: Math.max(current.lastSeen || 0, incoming.lastSeen || 0),
+        aiCache: { ...(current.aiCache || {}), ...(incoming.aiCache || {}) },
+      };
+    }
+    this.scheduleFlush();
   }
 
   public clear(): void {

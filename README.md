@@ -144,8 +144,11 @@ behind it.
 
 Being direct about the edges, because they matter more than the features:
 
-- **No cross-device identity.** State is per browser. The same person on a
-  laptop and a phone is two independent learners.
+- **No cross-device sync, but there is a seam for it.** State lives in this
+  browser. Pass `userId` to keep two people sharing a machine apart, and use
+  `initialStats` / `exportStats()` to carry familiarity across devices through
+  storage you already own. Mindra ships no backend and never will — see
+  [Carrying state across devices](#carrying-state-across-devices).
 - **No backend, dashboard or cohort analytics.** Bring your own `onSync` if you
   want aggregation.
 - **It does not move your UI around.** Mindra emits state; you decide what
@@ -153,6 +156,38 @@ Being direct about the edges, because they matter more than the features:
 - **Clicks are not comprehension.** A user who clicks the same button thirty
   times may be an expert or may be stuck. Read `friction` alongside
   `familiarity`.
+
+## Carrying state across devices
+
+Familiarity is stored per browser. If you want it to follow a person, you supply
+the storage — the library gives you both ends and stays out of the middle.
+
+```tsx
+<AdaptiveProvider
+  appId="my-app"
+  userId={user.id}                          // separate profiles on a shared machine
+  initialStats={statsLoadedFromYourApi}     // what you saved last time
+  mergeInitialStats                         // combine with this device's history
+  onSync={(events) => saveToYourApi(events)}
+/>
+```
+
+Read the state back out whenever you want to persist it:
+
+```ts
+const stats = runtime.exportStats()   // plain JSON, store it wherever
+```
+
+Two details worth knowing:
+
+- **`userId` is hashed before it becomes a storage key**, so passing an email or
+  an account id does not write that value into `localStorage`.
+- **Merging takes the larger counter rather than summing.** Hydrating the same
+  history twice cannot inflate a score, so re-hydration is always safe and
+  familiarity never moves backwards.
+
+Without `userId`, everyone using the browser shares one profile — which is
+usually wrong on a shared machine.
 
 ## Packages
 

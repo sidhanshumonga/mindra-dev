@@ -9,6 +9,15 @@ export interface MindraAIConfig {
 
 export interface MindraConfig {
   appId: string;
+  /**
+   * Identifies whose experience this is. Without it, state is shared by
+   * everyone using the browser — two people on one machine build a single
+   * familiarity profile between them.
+   *
+   * The value is hashed before it becomes a storage key, so passing an email or
+   * an account id does not write that value into localStorage.
+   */
+  userId?: string;
   lambda?: number; // Learning coefficient for familiarity decay
   storageKey?: string; // Key prefix for LocalStorage
   syncInterval?: number; // Throttle interval for sync in ms
