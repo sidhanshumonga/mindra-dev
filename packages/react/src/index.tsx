@@ -15,6 +15,12 @@ interface AdaptiveProviderProps extends MindraConfig {
   initialStats?: Record<string, ElementStats>;
   /** Combine with any state already on this device rather than replacing it. */
   mergeInitialStats?: boolean;
+  /**
+   * Called with the settled experience state whenever it changes. Save it
+   * against `userId` and pass it back as `initialStats` next time, and
+   * familiarity follows the person rather than the browser.
+   */
+  onPersist?: (stats: Record<string, ElementStats>) => void;
 }
 
 export function AdaptiveProvider({
@@ -55,6 +61,17 @@ export function AdaptiveProvider({
       {children}
     </AdaptiveContext.Provider>
   );
+}
+
+/**
+ * The runtime backing the nearest provider, or null before it starts.
+ *
+ * The declarative API covers the common cases; this is the escape hatch for
+ * anything that needs the runtime directly — reading `exportStats()` on demand,
+ * hydrating after a late login, or wiring your own persistence schedule.
+ */
+export function useMindraRuntime(): MindraRuntime | null {
+  return useContext(AdaptiveContext);
 }
 
 export interface UseAdaptiveOptions {

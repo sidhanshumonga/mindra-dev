@@ -25,10 +25,22 @@ export class MindraStorage {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private dirty = false;
   private onPageHide?: () => void;
+  private onPersist?: (stats: Record<string, ElementStats>) => void;
+  /**
+   * The last state handed to `onPersist`, so a flush that changed nothing does
+   * not trigger a redundant write to the consumer's storage.
+   */
+  private lastPersisted: string | null = null;
 
-  constructor(appId: string, customKeyPrefix?: string, userId?: string) {
+  constructor(
+    appId: string,
+    customKeyPrefix?: string,
+    userId?: string,
+    onPersist?: (stats: Record<string, ElementStats>) => void
+  ) {
     const scope = userId ? `_u${hashIdentifier(userId)}` : "";
     this.storageKey = `${customKeyPrefix || "mindra"}_stats_${appId}${scope}`;
+    this.onPersist = onPersist;
     this.load();
     this.bindLifecycle();
   }
@@ -88,8 +100,10 @@ export class MindraStorage {
     this.evictIfNeeded();
 
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.cache));
+      const serialized = JSON.stringify(this.cache);
+      localStorage.setItem(this.storageKey, serialized);
       this.dirty = false;
+      this.notifyPersist(serialized);
     } catch (e) {
       // Almost always a quota error. Shed half the cache and try once more
       // rather than failing every subsequent write for the rest of the session.
@@ -108,6 +122,21 @@ export class MindraStorage {
         }
       }
       console.warn("Mindra: failed to persist experience cache", e);
+    }
+  }
+
+  /**
+   * Hands settled state to the consumer, skipping content identical to what was
+   * handed over last time. A consumer that throws must not break local storage,
+   * so the callback is isolated.
+   */
+  private notifyPersist(serialized: string): void {
+    if (!this.onPersist || serialized === this.lastPersisted) return;
+    this.lastPersisted = serialized;
+    try {
+      this.onPersist({ ...this.cache });
+    } catch (e) {
+      console.warn("Mindra: onPersist handler threw", e);
     }
   }
 
@@ -183,6 +212,7 @@ export class MindraStorage {
         aiCache: { ...(current.aiCache || {}), ...(incoming.aiCache || {}) },
       };
     }
+    this.lastPersisted = JSON.stringify(this.cache);
     this.scheduleFlush();
   }
 

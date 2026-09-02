@@ -172,16 +172,42 @@ the storage — the library gives you both ends and stays out of the middle.
 />
 ```
 
-Read the state back out whenever you want to persist it:
+`onPersist` fires whenever the state settles, handing you exactly what to save:
 
-```ts
-const stats = runtime.exportStats()   // plain JSON, store it wherever
+```tsx
+<AdaptiveProvider
+  appId="my-app"
+  userId={user.id}
+  initialStats={statsLoadedFromYourApi}
+  mergeInitialStats
+  onPersist={(stats) => fetch("/api/mindra", {
+    method: "PUT",
+    body: JSON.stringify(stats),
+  })}
+/>
+```
+
+On your side that is one row per user with a JSON column, and two endpoints. On
+ours it is nothing — Mindra still stores no user data anywhere.
+
+Prefer `onPersist` over `onSync` for this. `onSync` hands you raw events, so
+persisting them means reimplementing the scoring accumulator in your own code;
+`onPersist` hands you the state the runtime already computed.
+
+For finer control, `useMindraRuntime()` returns the runtime itself:
+
+```tsx
+const runtime = useMindraRuntime()
+const stats = runtime?.exportStats()   // plain JSON, store it wherever
 ```
 
 Two details worth knowing:
 
 - **`userId` is hashed before it becomes a storage key**, so passing an email or
   an account id does not write that value into `localStorage`.
+- **Writes are coalesced, and hydration does not echo back.** A burst of clicks
+  produces one `onPersist` call, and loading a profile does not immediately
+  write it straight out again.
 - **Merging takes the larger counter rather than summing.** Hydrating the same
   history twice cannot inflate a score, so re-hydration is always safe and
   familiarity never moves backwards.

@@ -4,7 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
-import { AdaptiveProvider, Adaptive, useAdaptive } from "../src/index";
+import { AdaptiveProvider, Adaptive, useAdaptive, useMindraRuntime } from "../src/index";
 
 const html = (el: React.ReactElement) => renderToStaticMarkup(el);
 
@@ -215,5 +215,73 @@ describe("cross-device seam", () => {
     // bob shares the browser but not the profile
     const bob = await render("bob");
     expect(bob.getAttribute("data-adaptive-tier")).toBe("novice");
+  });
+});
+
+describe("persistence round trip", () => {
+  beforeEach(() => { localStorage.clear(); document.body.innerHTML = ""; });
+
+  it("carries familiarity from one device to another", async () => {
+    // device one: the user learns the control, and we capture what to store
+    let saved: Record<string, any> = {};
+    const deviceOne = document.createElement("div");
+    document.body.appendChild(deviceOne);
+
+    await act(async () => {
+      createRoot(deviceOne).render(
+        <AdaptiveProvider appId="app" userId="alice" onPersist={(s) => { saved = s; }}>
+          <Adaptive id="export" novice="Export this project as a PDF" expert="Export">
+            <button>Export</button>
+          </Adaptive>
+        </AdaptiveProvider>
+      );
+    });
+
+    const btn = deviceOne.querySelector("button")!;
+    await act(async () => {
+      for (let i = 0; i < 30; i++) btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 600));
+    });
+
+    expect(Object.keys(saved)).toContain("export");
+    expect(btn.getAttribute("data-adaptive-tier")).toBe("expert");
+
+    // device two: a different browser, seeded with what we stored
+    localStorage.clear();
+    const deviceTwo = document.createElement("div");
+    document.body.appendChild(deviceTwo);
+
+    await act(async () => {
+      createRoot(deviceTwo).render(
+        <AdaptiveProvider appId="app" userId="alice" initialStats={saved} mergeInitialStats>
+          <Adaptive id="export" novice="Export this project as a PDF" expert="Export">
+            <button>Export</button>
+          </Adaptive>
+        </AdaptiveProvider>
+      );
+    });
+
+    const btnTwo = deviceTwo.querySelector("button")!;
+    expect(btnTwo.getAttribute("data-adaptive-tier")).toBe("expert");
+    expect(btnTwo.textContent).toBe("Export");
+  });
+
+  it("exposes the runtime for direct access", async () => {
+    let runtime: any = null;
+    const Probe = () => {
+      runtime = useMindraRuntime();
+      return null;
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    await act(async () => {
+      createRoot(container).render(
+        <AdaptiveProvider appId="app"><Probe /></AdaptiveProvider>
+      );
+    });
+
+    expect(runtime).not.toBeNull();
+    expect(typeof runtime.exportStats).toBe("function");
   });
 });

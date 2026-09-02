@@ -1,6 +1,6 @@
 {
   "name": "@mindra.dev/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Element-level user familiarity, friction and confidence scoring. Local-first, zero dependencies, no backend required.",
   "keywords": [
     "adaptive-ui",

@@ -29,7 +29,12 @@ export class MindraRuntime {
     // Local-first by default. With no `onSync` handler nothing ever leaves
     // the browser; with no `ai` config the runtime is fully deterministic and
     // needs no model, no API key and no network. Both are strictly opt-in.
-    this.storage = new MindraStorage(config.appId, config.storageKey, config.userId);
+    this.storage = new MindraStorage(
+      config.appId,
+      config.storageKey,
+      config.userId,
+      config.onPersist
+    );
     this.telemetry = new MindraTelemetry(config.appId, (event) => this.handleEvent(event));
 
     if (this.config.ai) {

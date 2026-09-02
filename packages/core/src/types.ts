@@ -22,6 +22,16 @@ export interface MindraConfig {
   storageKey?: string; // Key prefix for LocalStorage
   syncInterval?: number; // Throttle interval for sync in ms
   onSync?: (events: InteractionEvent[]) => Promise<void>; // Optional sync callback
+  /**
+   * Called with the full experience state whenever it settles, ready to be
+   * saved wherever you keep user data. Pair with `userId` and `initialStats` to
+   * carry familiarity between devices.
+   *
+   * Prefer this over `onSync` for persistence: `onSync` hands you raw events, so
+   * storing them means reimplementing the scoring accumulator yourself. This
+   * hands you the state the runtime already computed.
+   */
+  onPersist?: (stats: Record<string, ElementStats>) => void;
   ai?: MindraAIConfig; // Configuration settings for AI prompt triggers
 }
 
