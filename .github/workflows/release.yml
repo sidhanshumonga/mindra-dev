@@ -1,0 +1,34 @@
+name: Release
+
+# Publishes on a version tag. Running in Actions is what makes npm provenance
+# possible: the OIDC token proves these artifacts were built from this commit,
+# which a local publish cannot attest to.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Publish @mindra.dev/core
+        run: npm publish --workspace=packages/core --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @mindra.dev/react
+        run: npm publish --workspace=packages/react --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
