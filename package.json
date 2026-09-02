@@ -11,13 +11,15 @@
   },
   "workspaces": [
     "packages/core",
-    "packages/react"
+    "packages/react",
+    "examples/*"
   ],
   "scripts": {
     "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/react",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/react/tsconfig.json --noEmit"
+    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/react/tsconfig.json --noEmit",
+    "dev:example": "npm run dev --workspace=examples/react-dashboard"
   },
   "devDependencies": {
     "jsdom": "^29.1.1",
