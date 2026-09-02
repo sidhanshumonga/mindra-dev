@@ -1,0 +1,175 @@
+import { ElementStats } from "./types";
+import { sanitizeElementId } from "./identity";
+
+const DEFAULT_STATS: ElementStats = {
+  clicks: 0,
+  hovers: 0,
+  abandonments: 0,
+  errors: 0,
+  totalHesitation: 0,
+};
+
+/**
+ * Upper bound on tracked elements. Every element a user ever hovers earns an
+ * entry, so an unbounded cache grows for the lifetime of the origin and will
+ * eventually exhaust the ~5MB localStorage budget.
+ */
+const MAX_ELEMENTS = 500;
+
+/** Writes are coalesced over this window rather than serialising per event. */
+const FLUSH_DELAY_MS = 500;
+
+export class MindraStorage {
+  private cache: Record<string, ElementStats> = {};
+  private storageKey: string;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private dirty = false;
+  private onPageHide?: () => void;
+
+  constructor(appId: string, customKeyPrefix?: string) {
+    this.storageKey = `${customKeyPrefix || "mindra"}_stats_${appId}`;
+    this.load();
+    this.bindLifecycle();
+  }
+
+  private load(): void {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          this.cache = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Mindra: failed to load experience cache", e);
+    }
+  }
+
+  /**
+   * A debounced cache can lose its last writes when the page goes away, so the
+   * pending state is committed on the terminal lifecycle events. `pagehide`
+   * covers the bfcache path that `beforeunload` misses on mobile Safari.
+   */
+  private bindLifecycle(): void {
+    if (typeof window === "undefined" || !window.addEventListener) return;
+
+    this.onPageHide = () => this.flush();
+    window.addEventListener("pagehide", this.onPageHide);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") this.flush();
+    });
+  }
+
+  /**
+   * Drops the coldest entries once the cache exceeds its cap. Entries without a
+   * `lastSeen` predate eviction and are treated as coldest.
+   */
+  private evictIfNeeded(): void {
+    const keys = Object.keys(this.cache);
+    if (keys.length <= MAX_ELEMENTS) return;
+
+    keys
+      .sort((a, b) => (this.cache[a].lastSeen || 0) - (this.cache[b].lastSeen || 0))
+      .slice(0, keys.length - MAX_ELEMENTS)
+      .forEach((k) => delete this.cache[k]);
+  }
+
+  /** Commits pending state to localStorage immediately. */
+  public flush(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (!this.dirty || typeof window === "undefined") return;
+
+    this.evictIfNeeded();
+
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.cache));
+      this.dirty = false;
+    } catch (e) {
+      // Almost always a quota error. Shed half the cache and try once more
+      // rather than failing every subsequent write for the rest of the session.
+      const keys = Object.keys(this.cache);
+      if (keys.length > 1) {
+        keys
+          .sort((a, b) => (this.cache[a].lastSeen || 0) - (this.cache[b].lastSeen || 0))
+          .slice(0, Math.ceil(keys.length / 2))
+          .forEach((k) => delete this.cache[k]);
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.cache));
+          this.dirty = false;
+          return;
+        } catch {
+          /* fall through to the warning below */
+        }
+      }
+      console.warn("Mindra: failed to persist experience cache", e);
+    }
+  }
+
+  /** Marks the cache dirty and schedules a coalesced write. */
+  private scheduleFlush(): void {
+    this.dirty = true;
+    if (this.flushTimer || typeof window === "undefined") return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      this.flush();
+    }, FLUSH_DELAY_MS);
+  }
+
+  /** @deprecated Prefer `flush()`. Retained so existing callers keep working. */
+  public save(): void {
+    this.flush();
+  }
+
+  public getStats(elementId: string): ElementStats {
+    const key = sanitizeElementId(elementId);
+    if (!this.cache[key]) {
+      return { ...DEFAULT_STATS };
+    }
+    return { ...this.cache[key] };
+  }
+
+  public updateStats(
+    elementId: string,
+    updater: (prev: ElementStats) => ElementStats
+  ): ElementStats {
+    const key = sanitizeElementId(elementId);
+    const prev = this.getStats(key);
+    const updated = updater(prev);
+    updated.lastSeen = Date.now();
+    this.cache[key] = updated;
+    this.scheduleFlush();
+    return updated;
+  }
+
+  public getAll(): Record<string, ElementStats> {
+    return { ...this.cache };
+  }
+
+  public clear(): void {
+    this.cache = {};
+    this.dirty = false;
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(this.storageKey);
+      } catch {}
+    }
+  }
+
+  /** Commits pending state and releases lifecycle listeners. */
+  public destroy(): void {
+    this.flush();
+    if (typeof window !== "undefined" && this.onPageHide) {
+      window.removeEventListener("pagehide", this.onPageHide);
+      this.onPageHide = undefined;
+    }
+  }
+}

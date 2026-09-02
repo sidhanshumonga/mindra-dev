@@ -1,0 +1,19 @@
+{
+  "name": "mindra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Element-level user familiarity scoring for adaptive interfaces.",
+  "license": "MIT",
+  "author": "Sidhanshu Monga",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sidhanshumonga/mindra-dev.git"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/react"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/react"
+  }
+}
