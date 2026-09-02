@@ -27,11 +27,37 @@ jobs:
           # token in the environment npm authenticates with an empty string and
           # fails outright instead of falling back to trusted publishing.
 
-      # Node 22 ships npm 10.x; trusted publishing needs 11.5.1 or later.
+      # Node 22 ships npm 10.x; trusted publishing needs 11.5.1 or later. An npm
+      # that predates it has no OIDC code path at all — it goes straight to
+      # "need auth", which looks identical to a misconfigured publisher.
       - name: Use an npm that understands trusted publishing
         run: |
           npm install -g npm@latest
-          npm --version
+          echo "npm now: $(npm --version) at $(which npm)"
+
+      # Turns the two indistinguishable causes of ENEEDAUTH into a definite
+      # answer: too-old CLI, or missing OIDC token.
+      - name: Check the preconditions for trusted publishing
+        run: |
+          set -e
+          NPM_VERSION="$(npm --version)"
+          echo "npm    : $NPM_VERSION"
+          echo "node   : $(node --version)"
+
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "OIDC   : token endpoint available"
+          else
+            echo "OIDC   : MISSING — the job cannot mint an id-token"
+            exit 1
+          fi
+
+          REQUIRED=11.5.1
+          OLDEST="$(printf '%s\n%s\n' "$NPM_VERSION" "$REQUIRED" | sort -V | head -n1)"
+          if [ "$OLDEST" != "$REQUIRED" ] && [ "$NPM_VERSION" != "$REQUIRED" ]; then
+            echo "npm $NPM_VERSION predates trusted publishing (needs >= $REQUIRED)"
+            exit 1
+          fi
+          echo "npm    : new enough for trusted publishing"
 
       - run: npm ci
       - run: npm run build
