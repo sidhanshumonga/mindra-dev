@@ -68,8 +68,24 @@ jobs:
       # short-lived publish rights, granted per package by the Trusted Publisher
       # entry on npmjs.com. That entry must name this repository and this
       # workflow file, and package.json's repository.url must match it.
+      # Skipping an already-published version keeps a re-run safe. A release
+      # spanning two packages can fail halfway — as this one did, with core
+      # published and react rejected — and without this the retry dies on E409
+      # before it ever reaches the package that still needs publishing.
       - name: Publish @mindra.dev/core
-        run: npm publish --workspace=packages/core --provenance
+        run: |
+          VERSION="$(node -p "require('./packages/core/package.json').version")"
+          if npm view "@mindra.dev/core@$VERSION" version >/dev/null 2>&1; then
+            echo "@mindra.dev/core@$VERSION is already on the registry — skipping"
+          else
+            npm publish --workspace=packages/core --provenance
+          fi
 
       - name: Publish @mindra.dev/react
-        run: npm publish --workspace=packages/react --provenance
+        run: |
+          VERSION="$(node -p "require('./packages/react/package.json').version")"
+          if npm view "@mindra.dev/react@$VERSION" version >/dev/null 2>&1; then
+            echo "@mindra.dev/react@$VERSION is already on the registry — skipping"
+          else
+            npm publish --workspace=packages/react --provenance
+          fi
