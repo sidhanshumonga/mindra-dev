@@ -166,8 +166,8 @@ Being direct about the edges, because they matter more than the features:
 
 ```bash
 npm install
-npm test          # 55 tests, including assertions that the runtime makes no network calls
 npm run build     # dual ESM/CJS, asserts the "use client" directive survives bundling
+npm test          # 57 tests, including assertions that the runtime makes no network calls
 npm run typecheck
 ```
 
