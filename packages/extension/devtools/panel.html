@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mindra DevTools Panel</title>
+  <style>
+    :root {
+      --bg-color: #202124;
+      --border-color: #3c4043;
+      --text-color: #e8eaed;
+      --text-secondary: #9aa0a6;
+      --active-bg: rgba(143, 134, 255, 0.15);
+      --accent-color: #8f86ff;
+      --novice-color: #f28b82;
+      --learning-color: #f5c173;
+      --expert-color: #81c995;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Panel Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 28px;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 12px;
+      background-color: #2b2c2f;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--accent-color);
+      letter-spacing: 0.05em;
+    }
+
+    .header-status {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Main Split Layout */
+    .split-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left Pane: Elements List */
+    .elements-pane {
+      width: 40%;
+      min-width: 200px;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pane-header {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      background-color: #2b2c2f;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .elements-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+    }
+
+    .element-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 28px;
+      padding: 0 12px;
+      border-bottom: 1px solid #292a2d;
+      cursor: pointer;
+    }
+
+    .element-item:hover {
+      background-color: #2a2b2e;
+    }
+
+    .element-item.active {
+      background-color: var(--active-bg);
+      border-left: 3px solid var(--accent-color);
+      padding-left: 9px;
+    }
+
+    .element-name-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .element-name {
+      font-family: monospace;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .element-meta {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    /* Right Pane: Details Inspector */
+    .details-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      text-align: center;
+      gap: 8px;
+    }
+
+    .details-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .details-title {
+      font-size: 14px;
+      font-family: monospace;
+      font-weight: 700;
+    }
+
+    .details-tier {
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      padding: 3px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .tier-novice { background-color: rgba(242, 139, 130, 0.15); color: var(--novice-color); }
+    .tier-learning { background-color: rgba(245, 193, 115, 0.15); color: var(--learning-color); }
+    .tier-proficient { background-color: rgba(143, 134, 255, 0.15); color: var(--accent-color); }
+    .tier-expert { background-color: rgba(129, 201, 149, 0.15); color: var(--expert-color); }
+
+    /* Grid Metrics layout */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background-color: #292a2d;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .bar-bg {
+      height: 4px;
+      background-color: #3c4043;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .badge-baking {
+      font-size: 9px;
+      background: #3c4043;
+      color: var(--text-secondary);
+      padding: 2px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 500;
+      vertical-align: middle;
+    }
+
+    /* Adaptations Box */
+    .adaptation-box {
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      background-color: rgba(143, 134, 255, 0.02);
+      margin-bottom: 12px;
+    }
+
+    .adaptation-label {
+      font-size: 11px;
+      color: var(--accent-color);
+      font-family: monospace;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .adaptation-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Bar -->
+  <div class="header">
+    <span class="header-title">&lt;mindra_inspector&gt;</span>
+    <span class="header-status" id="status-text">Scanning page...</span>
+  </div>
+
+  <!-- Workspace Container -->
+  <div class="split-container">
+    <!-- Left list panel -->
+    <div class="elements-pane">
+      <div class="pane-header">Observed Elements</div>
+      <ul class="elements-list" id="elements-list">
+        <!-- populated dynamically -->
+      </ul>
+    </div>
+
+    <!-- Right info inspector panel -->
+    <div class="details-pane" id="details-pane">
+      <div class="empty-state" id="empty-state">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
+        <p>No element selected</p>
+        <p style="font-size: 11px; margin-top: 4px;">Interact with annotated buttons or inputs on the page to collect familiarity telemetry.</p>
+      </div>
+
+      <div id="inspector-content" style="display: none;">
+        <div class="details-header">
+          <span class="details-title" id="el-name">button_id</span>
+          <span class="details-tier" id="el-tier">novice</span>
+        </div>
+
+        <!-- Metric Grid row 1 -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">FAMILIARITY</div>
+            <div class="metric-value" id="val-familiarity">0%</div>
+            <div class="bar-bg">
+              <div class="bar-fill" id="bar-familiarity"></div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">FRICTION INDEX</div>
+            <div class="metric-value" id="val-friction">0%</div>
+            <div class="bar-bg">
+              <div class="bar-fill" id="bar-friction"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Grid row 2 (baking features) -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">CURSOR HESITATION<span class="badge-baking">BAKING 🧪</span></div>
+            <div class="metric-value" style="color: var(--text-secondary); font-size: 16px; font-weight: 500;">0ms</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">ABANDONMENT RATE<span class="badge-baking">BAKING 🧪</span></div>
+            <div class="metric-value" style="color: var(--text-secondary); font-size: 16px; font-weight: 500;">0%</div>
+          </div>
+        </div>
+
+        <!-- Adaptation Box -->
+        <div class="adaptation-box">
+          <div class="adaptation-label">runtime_decision (mindra recommends) →</div>
+          <div class="adaptation-text" id="adaptation-text">Loading adaptation strategy...</div>
+        </div>
+
+        <!-- Behavioral Signals Box -->
+        <div class="adaptation-box">
+          <div class="adaptation-label">user_behavior_signals →</div>
+          <ul id="signals-list" style="list-style: none; font-family: monospace; font-size: 11px; line-height: 1.7; padding-left: 2px;">
+            <!-- populated dynamically -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="panel.js"></script>
+</body>
+</html>

@@ -12,13 +12,14 @@
   "workspaces": [
     "packages/core",
     "packages/react",
+    "packages/extension",
     "examples/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/react",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/react && npm run build --workspace=packages/extension",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/react/tsconfig.json --noEmit",
+    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/react/tsconfig.json --noEmit && tsc -p packages/extension/tsconfig.json",
     "dev:example": "npm run dev --workspace=examples/react-dashboard"
   },
   "devDependencies": {

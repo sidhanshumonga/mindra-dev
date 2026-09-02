@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Mindra DevTools",
+  "version": "0.1.0",
+  "description": "Inspect element-level familiarity, friction and confidence on any page running the Mindra runtime.",
+  "devtools_page": "devtools/devtools.html",
+  "icons": {
+    "48": "icons/favicon-dark-48.png",
+    "512": "icons/favicon-dark-512.png"
+  }
+}

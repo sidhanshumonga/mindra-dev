@@ -1,0 +1,18 @@
+{
+  "name": "@mindra.dev/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome DevTools panel for inspecting Mindra element state. Not published to npm.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@mindra.dev/core": "*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0"
+  }
+}

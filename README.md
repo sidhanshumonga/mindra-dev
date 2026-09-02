@@ -160,9 +160,7 @@ Being direct about the edges, because they matter more than the features:
 |---|---|
 | [`@mindra.dev/core`](packages/core) | Framework-agnostic runtime, scoring, storage |
 | [`@mindra.dev/react`](packages/react) | Provider, hooks, `<Adaptive>` |
-
-A DevTools panel for inspecting element friction on a live page is in progress
-and will land in a later release.
+| [`packages/extension`](packages/extension) | Chrome DevTools panel, declares no permissions |
 
 ## Contributing
 

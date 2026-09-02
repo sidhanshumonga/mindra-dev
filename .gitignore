@@ -7,3 +7,6 @@ dist/
 .env.local
 .env.*.local
 .claude/
+
+# built by tsup from packages/extension/src
+packages/extension/devtools/panel.js
