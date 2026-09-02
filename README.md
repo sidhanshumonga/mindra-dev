@@ -6,6 +6,9 @@
     <img src="https://img.shields.io/badge/gzipped-5.4_kB-4F46E5?style=flat-square" alt="5.4 kB gzipped" />
     <img src="https://img.shields.io/badge/runtime_dependencies-none-success?style=flat-square" alt="no runtime dependencies" />
     <img src="https://img.shields.io/badge/backend-not_required-success?style=flat-square" alt="no backend" />
+    <a href="https://github.com/sidhanshumonga/mindra-dev/actions/workflows/ci.yml">
+      <img src="https://github.com/sidhanshumonga/mindra-dev/actions/workflows/ci.yml/badge.svg" alt="CI" />
+    </a>
   </p>
 </div>
 
@@ -160,6 +163,15 @@ Being direct about the edges, because they matter more than the features:
 
 A DevTools panel for inspecting element friction on a live page is in progress
 and will land in a later release.
+
+## Contributing
+
+```bash
+npm install
+npm test          # 55 tests, including assertions that the runtime makes no network calls
+npm run build     # dual ESM/CJS, asserts the "use client" directive survives bundling
+npm run typecheck
+```
 
 ## License
 
