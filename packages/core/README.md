@@ -1,16 +1,16 @@
-# @mindra/core
+# @mindra.dev/core
 
 Framework-agnostic runtime for element-level user familiarity scoring. Local-first,
 no runtime dependencies, no backend.
 
-> Using React? Install [`@mindra/react`](https://www.npmjs.com/package/@mindra/react) instead — it wraps this package.
+> Using React? Install [`@mindra.dev/react`](https://www.npmjs.com/package/@mindra.dev/react) instead — it wraps this package.
 
 ```bash
-npm install @mindra/core
+npm install @mindra.dev/core
 ```
 
 ```ts
-import { MindraRuntime } from '@mindra/core'
+import { MindraRuntime } from '@mindra.dev/core'
 
 const mindra = new MindraRuntime({ appId: 'my-app' })
 

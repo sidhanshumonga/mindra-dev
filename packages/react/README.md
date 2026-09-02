@@ -1,14 +1,14 @@
-# @mindra/react
+# @mindra.dev/react
 
 Adapt copy, tooltips and confirmation flows to how familiar each user is with
 each element of your interface. Local-first, no backend, no API key.
 
 ```bash
-npm install @mindra/react
+npm install @mindra.dev/react
 ```
 
 ```tsx
-import { AdaptiveProvider, Adaptive, useAdaptive } from '@mindra/react'
+import { AdaptiveProvider, Adaptive, useAdaptive } from '@mindra.dev/react'
 
 // Wrap your app once
 <AdaptiveProvider appId="my-app">{children}</AdaptiveProvider>

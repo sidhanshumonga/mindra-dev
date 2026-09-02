@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState, cloneElement, isValidElement } from "react";
-import { MindraRuntime, MindraConfig, AdaptiveState, ExpertiseTier } from "@mindra/core";
+import { MindraRuntime, MindraConfig, AdaptiveState, ExpertiseTier } from "@mindra.dev/core";
 
 const AdaptiveContext = createContext<MindraRuntime | null>(null);
 

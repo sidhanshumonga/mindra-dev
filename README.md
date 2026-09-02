@@ -31,13 +31,13 @@ No signup. No API key. No backend. Nothing leaves the browser.
 ## Install
 
 ```bash
-npm install @mindra/react
+npm install @mindra.dev/react
 ```
 
 ## Quick start
 
 ```tsx
-import { AdaptiveProvider, Adaptive } from '@mindra/react'
+import { AdaptiveProvider, Adaptive } from '@mindra.dev/react'
 
 // 1. Wrap your app once
 <AdaptiveProvider appId="my-app">{children}</AdaptiveProvider>
@@ -158,8 +158,8 @@ Being direct about the edges, because they matter more than the features:
 
 | Package | |
 |---|---|
-| [`@mindra/core`](packages/core) | Framework-agnostic runtime, scoring, storage |
-| [`@mindra/react`](packages/react) | Provider, hooks, `<Adaptive>` |
+| [`@mindra.dev/core`](packages/core) | Framework-agnostic runtime, scoring, storage |
+| [`@mindra.dev/react`](packages/react) | Provider, hooks, `<Adaptive>` |
 
 A DevTools panel for inspecting element friction on a live page is in progress
 and will land in a later release.
