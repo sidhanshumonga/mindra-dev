@@ -1,34 +1,49 @@
 name: Release
 
-# Publishes on a version tag. Running in Actions is what makes npm provenance
-# possible: the OIDC token proves these artifacts were built from this commit,
-# which a local publish cannot attest to.
+# Publishes on a version tag, or on demand when a run needs repeating without
+# moving the tag.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Lets the runner mint the OIDC token npm exchanges for publish rights.
+      # This is the whole authentication story — there is no token to leak.
       id-token: write
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
+          # Deliberately no registry-url. It writes an .npmrc containing
+          # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}, and with no
+          # token in the environment npm authenticates with an empty string and
+          # fails outright instead of falling back to trusted publishing.
+
+      # Node 22 ships npm 10.x; trusted publishing needs 11.5.1 or later.
+      - name: Use an npm that understands trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
+
+      # No NODE_AUTH_TOKEN anywhere: npm exchanges the OIDC token for
+      # short-lived publish rights, granted per package by the Trusted Publisher
+      # entry on npmjs.com. That entry must name this repository and this
+      # workflow file, and package.json's repository.url must match it.
       - name: Publish @mindra.dev/core
         run: npm publish --workspace=packages/core --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish @mindra.dev/react
         run: npm publish --workspace=packages/react --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
